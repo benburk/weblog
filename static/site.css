@@ -1,0 +1,87 @@
+/* The blog's own layout. paper.css owns the type, palette, and the
+   markdown itself; this file only places a 65ch column on the page and
+   sets the few rows of chrome around it on the same line grid. */
+
+.column {
+  max-width: calc(65ch + 4ch);
+  margin: 0 auto;
+  padding: var(--row) 2ch calc(var(--row) * 4);
+}
+
+/* Room for the hanging # marks paper.css shows from 640px up. */
+@media (min-width: 640px) {
+  .column {
+    max-width: calc(65ch + 10ch);
+    padding-inline: 5ch;
+  }
+}
+
+/* Wide tables may spill into the margin the centred column leaves,
+   stopping a few characters short of the window. */
+.md {
+  --bleed-right: max(0px, (100vw - 100%) / 2 - 3ch);
+}
+
+/* One chrome row, one clear line below it. */
+.masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  height: var(--row);
+  margin-bottom: calc(var(--row) * 2);
+}
+
+.masthead a {
+  color: inherit;
+  text-decoration: none;
+  font-weight: var(--weight-strong);
+}
+
+.masthead nav {
+  display: flex;
+  gap: 2ch;
+}
+
+.masthead nav a,
+.theme {
+  font-weight: var(--weight-regular);
+  color: var(--ink-muted);
+}
+
+.masthead nav a:hover,
+.theme:hover {
+  color: var(--ink);
+}
+
+.theme {
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* The date sits on the line under the title, as an aside. */
+.md .dateline {
+  margin-top: -1.6em;
+  color: var(--ink-muted);
+}
+
+/* The index: one post per line, the date holding a fixed column so
+   titles line up down the list. No bullets; the date is the marker. */
+.md ul.posts {
+  padding-left: 0;
+}
+
+.md ul.posts > li::before {
+  content: none;
+}
+
+.md ul.posts > li {
+  display: grid;
+  grid-template-columns: 12ch 1fr;
+}
+
+.md ul.posts time {
+  color: var(--ink-muted);
+}

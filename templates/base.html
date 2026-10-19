@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="{{ lang }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ config.title }}{% endblock %}</title>
+    {% block description %}{% endblock %}
+    <script>
+      // Apply a stored theme choice before first paint; paper.js loads too late.
+      try {
+        var theme = localStorage.getItem("weblog:theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (e) {}
+    </script>
+    <!-- paper.css swaps its face in, so a font that arrives after first paint
+         reflows the page from the wider fallback. Fetch them alongside the CSS.
+         The href matches paper.css's own /fonts/ url, so it's one download. -->
+    <link rel="preload" href="/fonts/iAWriterMonoS-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/iAWriterMonoS-Bold.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="{{ get_url(path='paper.css') }}" />
+    <link rel="stylesheet" href="{{ get_url(path='site.css') }}" />
+    <link rel="alternate" type="application/atom+xml" title="{{ config.title }}" href="{{ get_url(path='atom.xml', trailing_slash=false) }}" />
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <div class="column">
+      <header class="masthead">
+        <a href="{{ get_url(path="/") }}">{{ config.title }}</a>
+        <nav>
+          <a href="{{ get_url(path='atom.xml', trailing_slash=false) }}">atom</a>
+          <button type="button" class="theme" title="Theme" hidden>system</button>
+        </nav>
+      </header>
+      <main class="md">{% block content %}{% endblock %}</main>
+    </div>
+    <script type="module">
+      import { cycleTheme, themeChoice } from "{{ get_url(path='paper.js') }}";
+
+      const KEY = "weblog:theme";
+      const button = document.querySelector(".theme");
+      button.textContent = themeChoice(KEY);
+      button.hidden = false;
+      button.addEventListener("click", () => {
+        button.textContent = cycleTheme(KEY);
+      });
+    </script>
+  </body>
+</html>

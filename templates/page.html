@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} · {{ config.title }}{% endblock %}
+{% block description %}{% if page.description %}<meta name="description" content="{{ page.description }}" />{% endif %}{% endblock %}
+
+{% block head %}
+{% if page.extra.math %}
+<link rel="stylesheet" href="{{ get_url(path='katex/katex.min.css') }}" />
+<script defer src="{{ get_url(path='katex/katex.min.js') }}"></script>
+<script defer src="{{ get_url(path='katex/auto-render.min.js') }}"></script>
+<script>
+  // Zola has no math renderer, so $...$ reaches the page as text.
+  document.addEventListener("DOMContentLoaded", () => {
+    renderMathInElement(document.querySelector("main"), {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false },
+      ],
+      throwOnError: false,
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<h1>{{ page.title }}</h1>
+{% if page.date %}<p class="dateline"><time datetime="{{ page.date }}">{{ page.date | date(format="%Y-%m-%d") }}</time></p>{% endif %}
+{{ page.content | safe }}
+{% endblock %}

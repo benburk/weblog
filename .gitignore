@@ -1,0 +1,4 @@
+.direnv/
+.claude/
+public/
+static/giallo.css
