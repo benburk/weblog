@@ -9,6 +9,8 @@ feed_filenames = ["atom.xml"]
 [markdown]
 # Code stays ink on the inset ground, as paper.css draws it.
 smart_punctuation = false
+insert_anchor_links = "left"
+bottom_footnotes = true
 
 [markdown.highlighting]
 # Class mode, so code is coloured by paper.css and follows the light/dark

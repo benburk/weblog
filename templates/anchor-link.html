@@ -1,0 +1,4 @@
+{#- paper.css hangs # marks beside h1-h3 only, so only those become links. -#}
+{%- if level <= 3 -%}
+<a class="md-anchor" href="#{{ id }}" aria-label="Link to this section">{% if level == 1 %}#{% elif level == 2 %}##{% else %}###{% endif %}</a>
+{%- endif -%}

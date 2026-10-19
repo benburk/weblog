@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The hanging heading mark, in paper.css's ink for each scheme. -->
+  <style>
+    path { fill: #171716; }
+    @media (prefers-color-scheme: dark) { path { fill: #d8d8d4; } }
+  </style>
+  <path d="M10 4h3.5v24H10zM18.5 4H22v24h-3.5zM4 10h24v3.5H4zM4 18.5h24V22H4z" />
+</svg>

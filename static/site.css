@@ -67,8 +67,10 @@
   color: var(--ink-muted);
 }
 
-/* The index: one post per line, the date holding a fixed column so
-   titles line up down the list. No bullets; the date is the marker. */
+/* The index, and the older/newer links under a post: one post per
+   line, a muted first column (a date, or which way the link goes)
+   holding a fixed width so titles line up. No bullets; the first
+   column is the marker. */
 .md ul.posts {
   padding-left: 0;
 }
@@ -82,6 +84,11 @@
   grid-template-columns: 12ch 1fr;
 }
 
-.md ul.posts time {
+.md ul.posts > li > :first-child {
   color: var(--ink-muted);
+}
+
+/* Under a post the first column is a word, not a date. */
+.md ul.post-nav > li {
+  grid-template-columns: 8ch 1fr;
 }

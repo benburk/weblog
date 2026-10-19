@@ -1,8 +1,5 @@
 +++
 title = "Watsky words"
-
-[extra]
-math = true
 +++
 
 Between 2019 and 2023, rapper George Watsky released three albums titled Complaint, Placement, and Intention. When arranged next to each other, the titles form a 3x3 word puzzle that can be read across and down:
@@ -21,7 +18,7 @@ Let's double check their work.
 
 We start by assembling a list of nine-letter english words:
 
-```bash
+```console
 $ curl https://raw.githubusercontent.com/cullback/english-wordlist/refs/heads/main/words.csv \
     | rg '^[a-z]{9}$' \
     > words.csv
@@ -29,7 +26,7 @@ $ wc -l words.csv
     18841 words.csv
 ```
 
-Checking all three-word combinations of that list would take a long time ($18841^3=6,688,239,997,321$).
+Checking all three-word combinations of that list would take a long time (18841³ = 6,688,239,997,321).
 
 We can explore the search space more efficiently by using binary search to find the words with the prefix we want:
 
@@ -53,14 +50,14 @@ for first in words:
 
 If we limit our search to only the top 1000 words, we reproduce their result:
 
-```bash
+```console
 $ head -n1000 words.csv | python watsky.py
     complaint,placement,intention
 ```
 
 Running this gives us 1480 solutions:
 
-```bash
+```console
 $ cat words.csv | python watsky.py | wc -l
     1480
 ```
