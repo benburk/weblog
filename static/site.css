@@ -92,3 +92,25 @@
 .md ul.post-nav > li {
   grid-template-columns: 8ch 1fr;
 }
+
+/* Projects: the name column fits the longest name, and a tagline wraps
+   under itself rather than under the name. A narrow page has no room
+   for the column, so the name takes its own line above the tagline. */
+.md ul.projects > li {
+  grid-template-columns: 14ch 1fr;
+}
+
+.md ul.projects > li > :first-child {
+  color: var(--ink);
+  font-weight: var(--weight-strong);
+}
+
+@media (max-width: 639px) {
+  .md ul.projects > li {
+    grid-template-columns: 1fr;
+  }
+}
+
+.md .feed a {
+  color: var(--ink-muted);
+}
