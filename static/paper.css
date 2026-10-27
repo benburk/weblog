@@ -1,1 +1,1425 @@
-/vault/repos/papercss/paper.css
+/*
+ * paper.css — the house stylesheet for mdwriter and podium.
+ *
+ * One monospace face on one line grid, one palette, and the small set
+ * of things both apps were drawing twice: the document (markdown as
+ * the file spells it), the drawn caret, and the chrome that frames
+ * them. Everything here is general. An app's own vocabulary — a
+ * planning row, a chat turn, a repo card — stays in the app.
+ *
+ * Consumed two ways:
+ *  - linked directly (mdwriter), where the app's own unlayered rules
+ *    override anything here;
+ *  - imported into a Tailwind source (podium), where `@theme inline`
+ *    re-exports the tokens below as utilities. The rules live in the
+ *    `base` and `components` layers, so utilities still win.
+ *
+ * Fonts are served at /fonts/ in both apps.
+ */
+
+@font-face {
+  font-family: "iA Writer Mono";
+  src: url("/fonts/iAWriterMonoS-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "iA Writer Mono";
+  src: url("/fonts/iAWriterMonoS-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "iA Writer Mono";
+  src: url("/fonts/iAWriterMonoS-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "iA Writer Mono";
+  src: url("/fonts/iAWriterMonoS-BoldItalic.woff2") format("woff2");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* The palette, stated once as light-dark() pairs rather than as a
+   light block and a dark block that have to be edited together. Which
+   branch resolves is `color-scheme`, set on :root below: absent
+   data-theme follows the OS, an explicit one pins a scheme. */
+:root {
+  --face: "iA Writer Mono", ui-monospace, Menlo, Consolas, monospace;
+  /* One type size for the whole interface. Hierarchy is weight and
+     hanging marks, never scale — so there is one size token, not a
+     scale. Both apps read at 17px, which a phone needs and a desktop
+     does not mind; an app that wants another sets this. */
+  --text: 17px;
+  --line: 1.6;
+  /* One line, as a length: the height of every chrome row and the
+     unit every vertical gap is counted in. */
+  --row: calc(var(--text) * var(--line));
+  /* The two weights there are. Hierarchy is carried by weight, and two
+     faces are loaded to carry it, so a third value is not a lighter or
+     heavier shade — it is the browser smearing one of these into a
+     counterfeit. Named so that the limit is visible in the stylesheet
+     rather than remembered, and so an app bending a framework's scale
+     onto it has something to bend it onto. */
+  --weight-regular: 400;
+  --weight-strong: 700;
+
+  --paper: light-dark(#fdfdfc, #161615);
+  --paper-inset: light-dark(#f1f1ee, #222220);
+  --ink: light-dark(#171716, #d8d8d4);
+  /* Strong enough for UI text, not only for asides: this clears 4.5:1
+     on paper in both schemes, where mdwriter's older #8a8a86 read at
+     3.40 and its dark partner at 4.01. */
+  --ink-muted: light-dark(#686863, #a0a098);
+  --rule: light-dark(#e3e3df, #33332f);
+  /* An edge that has to be found rather than merely sensed: the
+     underline of a field, the sidebar's own border. */
+  --boundary: light-dark(#85857e, #77776f);
+
+  /* The one chromatic token in the chrome, and the only thing that
+     says where focus is once the platform ring is taken off a field.
+     Stepped down about a tenth in value from mdwriter's #3b9eff,
+     which reads at 2.74:1 on paper — a focus indicator has to clear
+     3:1. Hue and saturation are unchanged; dark is mdwriter's own. */
+  --caret: light-dark(#358ee6, #52a8ff);
+
+  /* Status. Carried here rather than in the app that happens to use
+     them first, so the two never pick different reds. */
+  --danger: light-dark(oklch(55% 0.2 27), oklch(72% 0.16 27));
+  --on-danger: light-dark(oklch(100% 0 0), oklch(24% 0.01 260));
+  --warning: light-dark(oklch(53% 0.13 70), oklch(84% 0.155 85));
+  --success: light-dark(oklch(46% 0.13 145), oklch(72% 0.15 145));
+  --teal: light-dark(oklch(52% 0.11 210), oklch(72% 0.11 210));
+
+  /* What a row lifts to under the pointer, on a surface whose own
+     colour is not known here: the writing's own ink, thinned. On a
+     pinned-dark panel that lightens; on the page it darkens. */
+  --highlight: color-mix(in oklab, var(--ink) 14%, transparent);
+  --veil: light-dark(rgb(0 0 0 / 1%), rgb(0 0 0 / 12%));
+  /* The scrim behind an overlay, and the shadow that lifts the panel
+     off the page. Dark needs more of both, where a light shadow
+     disappears. */
+  --dim: light-dark(rgb(0 0 0 / 30%), rgb(0 0 0 / 45%));
+  --shadow: light-dark(rgb(0 0 0 / 15%), rgb(0 0 0 / 55%));
+  --lift: 0 0.5rem 2rem var(--shadow);
+
+  /* Corners are the one axis the two apps still disagree on:
+     mdwriter rounds a row at 4px, podium squares everything to keep
+     the character grid. Set them per app; the components below ask
+     for the token and take whatever it says. Named away from
+     `--radius-*` and `--shadow-*` on purpose: those are Tailwind v4
+     theme namespaces, and a key that resolves to a token of its own
+     name is a cycle. */
+  --corner-control: 4px;
+  --corner-overlay: 8px;
+
+  /* The caret is drawn outside the field it belongs to and has to
+     clear the app's own stacking, which only the app knows. */
+  --z-caret: 6;
+
+  /* How far past its column a block too wide for one may grow before
+     it scrolls inside itself — a wide table spilling into the margin
+     a centred column leaves beside it. Only the app knows whether
+     there is any such margin, so the default lends none and the
+     block scrolls at the column's edge. */
+  --bleed-right: 0px;
+
+  /* The eight tints are the one chromatic set in a document: a row
+     wears the tint of the tag it carries, so a tag reads as colour
+     as well as a word. The hues are evenly spaced and each alpha is
+     SOLVED, not chosen — every tint composites to the same luminance
+     over its ground, so yellow does not wash out while indigo shouts.
+     Dark is not light with more alpha but the same hues lifted: a
+     deep indigo over a near-black page is invisible however much of
+     it you pour in. Each has a -deep partner, which is what hover and
+     selection deepen a row to rather than replacing its colour with a
+     grey — losing the colour on click reads as the row switching off. */
+  --tint-0: light-dark(rgb(197 60 32 / 6%), rgb(223 149 134 / 31%));
+  --tint-0-deep: light-dark(rgb(197 60 32 / 16%), rgb(223 149 134 / 54%));
+  --tint-1: light-dark(rgb(197 175 32 / 11%), rgb(223 211 134 / 24%));
+  --tint-1-deep: light-dark(rgb(197 175 32 / 33%), rgb(223 211 134 / 42%));
+  --tint-2: light-dark(rgb(98 197 32 / 11%), rgb(170 223 134 / 24%));
+  --tint-2-deep: light-dark(rgb(98 197 32 / 31%), rgb(170 223 134 / 43%));
+  --tint-3: light-dark(rgb(32 197 115 / 10%), rgb(134 223 179 / 24%));
+  --tint-3-deep: light-dark(rgb(32 197 115 / 29%), rgb(134 223 179 / 43%));
+  --tint-4: light-dark(rgb(32 170 197 / 9%), rgb(134 208 223 / 26%));
+  --tint-4-deep: light-dark(rgb(32 170 197 / 25%), rgb(134 208 223 / 45%));
+  --tint-5: light-dark(rgb(32 54 197 / 5%), rgb(134 146 223 / 35%));
+  --tint-5-deep: light-dark(rgb(32 54 197 / 14%), rgb(134 146 223 / 61%));
+  --tint-6: light-dark(rgb(137 32 197 / 5%), rgb(190 134 223 / 33%));
+  --tint-6-deep: light-dark(rgb(137 32 197 / 15%), rgb(190 134 223 / 59%));
+  --tint-7: light-dark(rgb(197 32 137 / 5%), rgb(223 134 190 / 32%));
+  --tint-7-deep: light-dark(rgb(197 32 137 / 15%), rgb(223 134 190 / 56%));
+
+  color-scheme: light dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@layer base {
+  /* rem stays 16px in both apps whatever the reading size is, so a
+     length written in rem means the same thing in each. The reading
+     size is --text, set on the body alone; --row is derived from it,
+     which is what a chrome row and a vertical gap are counted in. */
+  :root {
+    font-size: 16px;
+  }
+
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+  }
+
+  /* Both apps scroll the document rather than a panel inside a pinned
+     window, which is what gives a phone's page its momentum, its
+     rubber band, and its folding toolbars. How tall the page is, and
+     what is fixed over it, is each app's own.
+
+     A tap is answered by what it does, not by the platform's grey
+     flash over whatever was under the finger. */
+  body {
+    -webkit-tap-highlight-color: transparent;
+    color: var(--ink);
+    background: var(--paper);
+    font-family: var(--face);
+    font-size: var(--text);
+    font-weight: var(--weight-regular);
+    line-height: var(--line);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--ink) 20%, transparent);
+  }
+
+  /* One colour says "focus" across the whole interface: the caret's
+     blue, which is the only chromatic token in the chrome and is
+     already what a text field shows. In ink it read as a black box
+     drawn round the control — and it is drawn most often when a
+     dialog closes on Escape and hands focus back to the button that
+     opened it, which is precisely when it should be quiet about it
+     without being invisible. */
+  :focus-visible {
+    outline: 2px solid var(--caret);
+    outline-offset: 1px;
+  }
+
+  /* A field already says where focus is, and says it more precisely
+     than a ring drawn around the whole box: a text field puts the
+     caret at the character you are about to type, and a select
+     darkens its own underline. Everything else — buttons, links,
+     menu rows — has nothing else to show it with and keeps the ring. */
+  :is(
+    input:not(
+      [type="button"],
+      [type="checkbox"],
+      [type="color"],
+      [type="file"],
+      [type="hidden"],
+      [type="radio"],
+      [type="range"],
+      [type="reset"],
+      [type="submit"]
+    ),
+    select,
+    textarea
+  ):focus-visible {
+    outline: none;
+  }
+
+  /* The platform's caret, where it is the one drawn, in the focus blue
+     rather than the text's own ink. */
+  :is(input, textarea) {
+    caret-color: var(--caret);
+  }
+
+  /* paper.js hangs this on the root once the drawn caret is running.
+     Without it the platform's own caret stays, because a field with
+     neither ring nor caret has nothing at all. */
+  :root.drawn-caret :is(input, textarea) {
+    caret-color: transparent;
+  }
+
+  a {
+    color: var(--ink);
+    text-underline-offset: 2px;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  /* Headings are body size and bold (iA Writer's rule): every line box
+     is identical, so the page keeps one vertical rhythm and the
+     character grid is never scaled. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--face);
+    font-size: 1em;
+    font-weight: var(--weight-strong);
+    letter-spacing: 0;
+    color: var(--ink);
+  }
+
+  strong {
+    font-weight: var(--weight-strong);
+  }
+
+  small {
+    font-size: 1em;
+    color: var(--ink-muted);
+  }
+
+  code,
+  kbd,
+  pre {
+    font-family: var(--face);
+    font-size: 1em;
+  }
+
+  /* A long token with nowhere to break — a path, a hash, a URL — is
+     broken rather than allowed to widen the column it sits in. */
+  p,
+  ul,
+  ol,
+  pre,
+  blockquote {
+    overflow-wrap: anywhere;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  /* Controls stay bare here. A menu row, a chip, an icon button and
+     an inline field are all buttons and inputs too, and painting
+     every one of them as chrome means every one of those has to undo
+     it. `.btn` and `.field` below say which ones meant it. */
+  /* Tailwind's preflight, which podium layers this under, gives a
+     button the arrow; the pointer is what says it can be pressed. */
+  button:enabled,
+  input:is([type="submit"], [type="button"], [type="reset"]):enabled {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  /* A reset leaves Safari's own inner shadow and rounded edge on a
+     field, so a bare one is not bare until this says so. */
+  input:not([type="checkbox"], [type="radio"], [type="hidden"]),
+  textarea,
+  select {
+    appearance: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  label {
+    display: block;
+    margin: 0.75rem 0 0.25rem;
+    font-weight: var(--weight-strong);
+  }
+
+  fieldset {
+    min-width: 0;
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  fieldset[role="group"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1ch;
+  }
+
+  fieldset[role="group"] form {
+    display: flex;
+  }
+
+  /* Opening a dialog, closing it, dismissing it on the backdrop or on
+     Escape, and putting the caret in the first field are all markup:
+     `command` and `commandfor` on the buttons, `closedby` and
+     `autofocus` on the dialog. */
+  dialog {
+    margin: auto;
+    max-height: calc(100dvh - 2rem);
+    overflow: auto;
+    border: 1px solid var(--rule);
+    border-radius: var(--corner-overlay);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--lift);
+    /* Fifty-four columns of content, with the frame's border outside
+       them. A dialog sized in rem leaves a fractional column, and its
+       footer of buttons — aligned to the right edge — lands on it. */
+    width: min(calc(54ch + 2px), calc(100% - 4ch));
+    padding: var(--row) 2ch;
+  }
+
+  /* A quiet veil, not frosted glass. */
+  dialog::backdrop {
+    background: var(--dim);
+  }
+
+  dialog form > * + *,
+  form[popover] > * + * {
+    margin-top: 0.75rem;
+  }
+
+  [popover] {
+    border: 1px solid var(--rule);
+    border-radius: var(--corner-overlay);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--lift);
+    padding: var(--row) 2ch;
+  }
+
+  /* Disclosure is a character, like every other mark in the
+     interface: the icon set is Unicode and neither app ships an SVG
+     for chrome. */
+  summary {
+    display: flex;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    gap: 1ch;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::before {
+    content: "▸";
+    flex: none;
+    width: 1ch;
+    color: var(--ink-muted);
+  }
+
+  details[open] > summary::before {
+    content: "▾";
+  }
+
+  details > *:not(summary) {
+    margin-top: 0.5rem;
+  }
+
+  /* The interface's own tables, not the document's — a markdown table
+     is drawn as the file spells it, under .md below. */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid var(--rule);
+    padding: 0.5rem 1ch;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    font-weight: var(--weight-strong);
+  }
+}
+
+/* The document. Everything inside a .md container renders canonical
+   markdown the way mdwriter's editor shows it: one monospace grid,
+   one line-height rhythm, blocks separated by exactly one blank line,
+   syntax drawn where the file has it.
+
+   It pairs with two kinds of content:
+    - an editor's own rendering, where inline syntax is literal text
+      carrying .md-* classes and structure carries data- attributes;
+    - plain HTML from a stock markdown renderer (a blog post, an
+      agent's reply), where the semantic elements (strong, em, code,
+      a, s/del) get the same look, minus the visible syntax
+      characters. */
+@layer components {
+  .md {
+    font-family: var(--face);
+    line-height: var(--line);
+    color: var(--ink);
+  }
+
+  /* Headings stay at body size (iA Writer's rule): every line box is
+     identical, so the page keeps one vertical rhythm and the character
+     grid is never scaled. Hierarchy comes from weight and hanging #
+     marks. */
+  .md h1,
+  .md h2,
+  .md h3,
+  .md h4,
+  .md h5,
+  .md h6 {
+    font-size: 1em;
+    font-weight: var(--weight-strong);
+    margin: 1.6em 0;
+    position: relative;
+  }
+
+  /* The file's first line is line one: no phantom blank above it, and
+     the document's first line lands on the same grid line as chrome
+     beside it (the folder tree). */
+  .md > :first-child {
+    margin-top: 0;
+  }
+
+  /* Level markers hang in the left margin like markdown source. Hidden
+     on narrow screens where the margin can't fit them without causing
+     horizontal overflow. */
+  .md h1::before,
+  .md h2::before,
+  .md h3::before {
+    position: absolute;
+    color: var(--ink-muted);
+    font-weight: var(--weight-regular);
+    display: none;
+  }
+
+  .md h1::before {
+    content: "#";
+    left: -2ch;
+  }
+
+  .md h2::before {
+    content: "##";
+    left: -3ch;
+  }
+
+  .md h3::before {
+    content: "###";
+    left: -4ch;
+  }
+
+  @media (min-width: 640px) {
+    .md h1::before,
+    .md h2::before,
+    .md h3::before {
+      display: block;
+    }
+  }
+
+  /* A renderer that links each heading (zola's insert_anchor_links)
+     puts the marks in an .md-anchor of its own, and they become the
+     link: the same characters in the same margin, so the pseudo-
+     element's copy stands aside. */
+  .md :is(h1, h2, h3):has(> .md-anchor)::before {
+    content: none;
+  }
+
+  .md .md-anchor {
+    display: none;
+    position: absolute;
+    right: calc(100% + 1ch);
+    color: var(--ink-muted);
+    font-weight: var(--weight-regular);
+    text-decoration: none;
+  }
+
+  .md .md-anchor:hover {
+    color: var(--ink);
+  }
+
+  @media (min-width: 640px) {
+    .md .md-anchor {
+      display: inline;
+    }
+  }
+
+  .md p {
+    margin: 1.6em 0;
+  }
+
+  /* Markers are drawn as literal characters on the monospace grid:
+     indents are whole ch multiples, so nested text stays column-aligned
+     exactly as it would in markdown source. */
+  .md ul,
+  .md ol {
+    margin: 1.6em 0;
+    list-style: none;
+    padding-left: 2ch;
+  }
+
+  .md ol {
+    padding-left: 3ch;
+    counter-reset: item;
+  }
+
+  /* Items are adjacent lines, exactly as in the file. */
+  .md li {
+    position: relative;
+    margin: 0;
+  }
+
+  .md li > p {
+    margin: 0;
+  }
+
+  /* Nested lists are adjacent lines inside their item, no blank line. */
+  .md li > ul,
+  .md li > ol {
+    margin: 0;
+  }
+
+  .md li > p + p {
+    margin-top: 1.6em;
+  }
+
+  .md ul > li::before {
+    content: "-";
+    position: absolute;
+    left: -2ch;
+    /* "[ ]" holds a breakable space; the marker is one unsplittable
+       glyph run whatever the zoom does to ch rounding. */
+    white-space: nowrap;
+    color: var(--ink-muted);
+  }
+
+  /* Task items: the checkbox is drawn as literal [ ] / [x] characters
+     in a 4ch indent, exactly the cells "- [ ] " syntax would occupy
+     minus the dash. */
+  .md ul:has(> li[data-checked]) {
+    padding-left: 4ch;
+  }
+
+  .md ul > li[data-checked]::before {
+    content: "[ ]";
+    left: -4ch;
+  }
+
+  .md ul > li[data-checked="true"]::before {
+    content: "[x]";
+  }
+
+  .md li[data-checked="true"] {
+    color: var(--ink-muted);
+  }
+
+  /* Right-aligning "n." keeps the dot in a fixed column; two-digit
+     numbers hang left into the margin instead of pushing text right.
+     nowrap overrides the editor's inherited break-word, which would
+     instead wrap the period to its own line — a stray dot in the
+     gutter. */
+  .md ol > li::before {
+    counter-increment: item;
+    content: counter(item) ".";
+    position: absolute;
+    left: -3ch;
+    width: 2ch;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--ink-muted);
+  }
+
+  .md blockquote {
+    margin: 1.6em 0;
+    padding-left: 2ch;
+    border-left: 2px solid var(--rule);
+    color: var(--ink-muted);
+  }
+
+  /* No horizontal padding: a padded chip would push the rest of the
+     line off the character grid. font/line inheritance overrides the UA
+     stylesheet's `code { font-family: monospace }`, whose fallback font
+     has taller metrics and would grow the line box by a pixel. */
+  .md code,
+  .md pre {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .md code {
+    background: var(--paper-inset);
+    border-radius: var(--corner-control);
+    padding: 0;
+  }
+
+  /* The block takes no padding, so its box is exactly the lines of
+     code: a fence of N lines is N lines tall and sits one blank line
+     from its prose, the gap every other block gets. The ground it
+     wears is wider than that box, and it grows by paint rather than
+     layout — a spread-only shadow in the background's own colour,
+     half an em on every side.
+
+     Padding cannot do that job. Horizontally it can (2ch out, 2ch of
+     negative margin back), but vertically a neighbour's 1.6em margin
+     collapses over anything smaller, so padding only ever adds to the
+     gap: half a line at each end reads a line and a half from the
+     prose, and negative margins to claw it back break the moment two
+     fences meet. A shadow moves nothing, so the grid holds and the
+     four sides can finally be equal.
+
+     Half an em sits the edge nearer the code than the prose. Half a
+     line and two pixels put it at the midpoint between their inks,
+     with as much air inside the ground as white outside, and there
+     the block did not read as a block: with no more white around it
+     than ground, it read as a band the prose ran into. Pulled in,
+     the white outside is clearly wider than the ground, and the code
+     still has room in it, because the code's own half-leading counts
+     as air inside. Any tighter and the sides pinch, where there is no
+     leading to help. It also clears the 1.25rem gutter the editor
+     keeps outside the column, and the 2ch a narrow page has.
+
+     The ground is square, which is the one boxy shape a shadow can
+     draw. A shadow's corner grows with its spread, so a rounded box
+     here wears its own radius plus that spread — this ground can
+     take no corner between nothing and half an em, and half an em
+     of radius reads as a capsule, not a block of code. Zero it is,
+     and a spread keeps a square corner square. A smaller corner
+     would mean painting the ground as a pseudo-element instead, and
+     that cannot be done while the block is also the scroller: a box
+     sticking out of an overflow: auto element is overflow, and the
+     fence grows a scrollbar it has no use for. */
+  /* Code SCROLLS where prose wraps. A wrap is fine in a paragraph or a
+     quote — those lines are sentences and the file has no opinion about
+     where one breaks — but in code the line IS the structure, and a
+     wrap silently turns one line of the file into two on screen. Said
+     here rather than left to the UA default because the editor sets
+     pre-wrap on its root, which every block inherits. */
+  .md pre {
+    background: var(--paper-inset);
+    border-radius: 0;
+    padding: 0;
+    margin: 1.6em 0;
+    box-shadow: 0 0 0 0.5em var(--paper-inset);
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .md pre code {
+    background: none;
+    padding: 0;
+  }
+
+  /* A fence that scrolls says so with a hairline, not the platform's
+     full-width bar in a colour the page never uses. */
+  .md pre {
+    scrollbar-width: thin;
+    scrollbar-color: var(--rule) transparent;
+  }
+
+  /* Highlighted code, as TextMate scope classes: `.z-comment`,
+     `.z-keyword.z-operator`, the form zola's highlighter (giallo) and
+     syntect emit in class mode. Which scopes get a class of their own
+     is the highlighter's theme's to say, so paper-theme.json ships
+     beside this file; the colours are here, so they follow the scheme.
+     Hierarchy is weight before colour, as everywhere else: keywords are
+     bold, comments are an aside, and only literals take a hue. */
+  .md .z-comment {
+    color: var(--ink-muted);
+    font-style: italic;
+  }
+
+  .md :is(.z-keyword, .z-storage) {
+    font-weight: var(--weight-strong);
+  }
+
+  .md .z-keyword.z-operator {
+    font-weight: var(--weight-regular);
+  }
+
+  .md .z-string {
+    color: var(--teal);
+  }
+
+  .md .z-constant {
+    color: var(--warning);
+  }
+
+  .md .z-markup.z-inserted {
+    color: var(--success);
+  }
+
+  .md :is(.z-markup.z-deleted, .z-invalid) {
+    color: var(--danger);
+  }
+
+  /* A highlighted line takes the block's whole width, not just its
+     text. */
+  .md .z-hl {
+    display: inline-block;
+    min-width: 100%;
+    background: var(--highlight);
+  }
+
+  /* A fence's filename (```rust,name=src/main.rs) as a muted first
+     line of the block. */
+  .md code[data-name]::before {
+    content: attr(data-name);
+    display: block;
+    color: var(--ink-muted);
+  }
+
+  /* KaTeX sets math at 1.21em, which grows every line it sits on;
+     at body size it keeps the grid like everything else. katex.css is
+     unlayered, and an unlayered rule outranks any layered one whatever
+     its selector, so the two properties it sets are !important here. */
+  .md .katex {
+    font-size: 1em !important;
+  }
+
+  .md .katex-display {
+    margin: 1.6em 0 !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  /* YAML frontmatter: dim content between two hairlines — the ---
+     fences of the file drawn the same way a rule is. */
+  .md pre.frontmatter {
+    /* Compact fences: the top stroke gets a half-line above the yaml,
+       and the bottom stroke sits centered inside a single clear line
+       between the yaml and the body — half a line of padding to the
+       stroke, half a line of margin after it. */
+    background:
+      linear-gradient(var(--rule), var(--rule)) center top 0.8em / 100% 1px
+      no-repeat,
+      linear-gradient(var(--rule), var(--rule)) center bottom / 100% 1px
+      no-repeat;
+    border-radius: 0;
+    box-shadow: none;
+    color: var(--ink-muted);
+    margin: 0 0 0.8em;
+    padding: 1.6em 0 0.8em;
+    overflow: visible;
+    /* Anchors the blessed annotations to their lines. */
+    position: relative;
+  }
+
+  /* The fence's line already holds the whole gap. */
+  .md pre.frontmatter + * {
+    margin-top: 0;
+  }
+
+  /* Blessed frontmatter: the fact's muted echo at the line's right
+     edge — an age, a local clock. */
+  .fm-note {
+    position: absolute;
+    right: 0;
+    color: var(--ink-muted);
+  }
+
+  /* The rule's box is one line tall with the stroke centered — the
+     --- line of the file. */
+  .md hr {
+    border: none;
+    margin: 0;
+    padding: 0.8em 0;
+    background: linear-gradient(var(--rule), var(--rule)) center / 100% 1px
+      no-repeat;
+  }
+
+  .md img {
+    max-width: 100%;
+  }
+
+  /* A table is as wide as the columns the file spells: fit-content,
+     not the width: 100% the chrome's own tables above take, so a
+     two-column table stays two columns wide.
+
+     Past that it grows to the right and scrolls only when it has run
+     out of page. The text column is 65ch on a window that is usually
+     wider, so a table that overruns it should spill into margin that
+     was empty anyway rather than hide half of itself behind a
+     scroller at the column's edge — but it must stop at the window,
+     because a page that scrolls sideways moves the prose too, and
+     the prose had nothing to do with it.
+
+     Where the window is, only the app knows: this stylesheet can see
+     the table's containing block and nothing beyond it, and cannot
+     work out how much room lies to the right of a column it did not
+     centre. So the app says, in --bleed-right, how far past its
+     column a block may grow. It defaults to 0, and a wide table then
+     scrolls at the column's edge, which is the right answer for a
+     layout with no margin to lend.
+
+     Tables render the way the file reads: thin vertical rules where
+     the pipes are, and a dashed line on its own text line below the
+     header where the | --- | row lives. */
+  .md table {
+    border-collapse: collapse;
+    margin: 1.6em 0;
+    display: block;
+    width: fit-content;
+    max-width: calc(100% + var(--bleed-right));
+    overflow-x: auto;
+  }
+
+  /* Cells don't wrap either, for the same reason: a row is one line of
+     the file, so a wrapped cell would spread that line down the page
+     and put the columns out of step with each other. The row runs
+     past the column's edge instead. */
+  .md th,
+  .md td {
+    border: none;
+    border-left: 1px solid var(--rule);
+    padding: 0 1ch;
+    text-align: left;
+    white-space: nowrap;
+    min-width: 4ch;
+  }
+
+  .md th:last-child,
+  .md td:last-child {
+    border-right: 1px solid var(--rule);
+  }
+
+  .md th {
+    font-weight: var(--weight-strong);
+    padding-bottom: 1.6em;
+    position: relative;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        var(--rule) 0 5px,
+        transparent 5px 9px
+      )
+      center bottom 0.75em / calc(100% - 2ch) 1.5px no-repeat;
+  }
+
+  /* Alignment shows as real colon glyphs at the ends of the dashes,
+     exactly like the ":---:" syntax in the file. Stock renderers emit
+     style="text-align: …"; the editor emits data-align. */
+  .md th[data-align="center"]::before,
+  .md th[data-align="center"]::after,
+  .md th[data-align="right"]::after,
+  .md th[style*="center"]::before,
+  .md th[style*="center"]::after,
+  .md th[style*="right"]::after {
+    content: ":";
+    position: absolute;
+    bottom: 0.35em;
+    color: var(--ink-muted);
+    font-weight: var(--weight-regular);
+    line-height: 1;
+  }
+
+  .md th[data-align="center"]::before,
+  .md th[style*="center"]::before {
+    left: 1ch;
+  }
+
+  .md th[data-align="right"]::after,
+  .md th[data-align="center"]::after,
+  .md th[style*="right"]::after,
+  .md th[style*="center"]::after {
+    right: 1ch;
+  }
+
+  .md th[data-align="right"],
+  .md th[style*="right"] {
+    background-position: left 1ch bottom 0.75em;
+    background-size: calc(100% - 3.4ch) 1.5px;
+  }
+
+  .md th[data-align="center"],
+  .md th[style*="center"] {
+    background-size: calc(100% - 4.8ch) 1.5px;
+  }
+
+  /* Inline styles. In the editor these arrive as .md-* spans around
+     literal syntax; in rendered HTML as semantic elements. Same look. */
+  .md-syntax {
+    color: var(--ink-muted);
+  }
+
+  .md-strong,
+  .md strong,
+  .md b {
+    font-weight: var(--weight-strong);
+  }
+
+  .md-em,
+  .md em,
+  .md i {
+    font-style: italic;
+  }
+
+  .md-code {
+    background: var(--paper-inset);
+    border-radius: var(--corner-control);
+  }
+
+  /* The line is drawn as a background instead of text-decoration:
+     iA Writer Mono's strikeout metric sits above the visual center of
+     the x-height, and line-through offers no offset control. */
+  .md-strike,
+  .md s,
+  .md del {
+    color: var(--ink-muted);
+    text-decoration: none;
+    background: linear-gradient(currentColor, currentColor)
+      0 calc(50% + 1px) / 100% 1px no-repeat;
+  }
+
+  /* Links: the label reads like a link, syntax (in the editor) fades. */
+  .md-link,
+  .md a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--ink-muted);
+  }
+
+  .md-link-url {
+    opacity: 0.55;
+  }
+
+  /* A raised or lowered glyph would push its line box taller and put
+     every line after it off the grid. */
+  .md :is(sup, sub) {
+    line-height: 0;
+  }
+
+  /* Footnotes, as pulldown-cmark (zola's renderer) emits them with
+     bottom_footnotes. A reference stays on the line as [1], the way
+     the file brackets it, rather than climbing above it. */
+  .md .footnote-reference {
+    vertical-align: baseline;
+    font-size: inherit;
+  }
+
+  .md .footnote-reference a {
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+
+  .md .footnote-reference a::before {
+    content: "[";
+  }
+
+  .md .footnote-reference a::after {
+    content: "]";
+  }
+
+  /* The notes are an aside, under a --- of their own. */
+  .md .footnotes {
+    color: var(--ink-muted);
+  }
+
+  .md .footnotes::before {
+    content: "";
+    display: block;
+    margin-top: 1.6em;
+    padding: 0.8em 0;
+    background: linear-gradient(var(--rule), var(--rule)) center / 100% 1px
+      no-repeat;
+  }
+
+  .md .footnotes a[href^="#fr-"] {
+    text-decoration: none;
+  }
+}
+
+@layer components {
+  /* A platform caret is one hairline in the text's own colour, which
+     is not enough to find in a page of monospace. This one is drawn:
+     a single element paper.js parks wherever focus is. It is `fixed`
+     because it has to work in a modal dialog's top layer as well as
+     on the page, and it is moved into the dialog when the field is in
+     one. */
+  .caret {
+    position: fixed;
+    width: 3px;
+    border-radius: 1.5px;
+    background: var(--caret);
+    pointer-events: none;
+    z-index: var(--z-caret);
+    animation: paper-caret 1.1s steps(1, end) infinite;
+  }
+
+  @keyframes paper-caret {
+    0%,
+    55% {
+      opacity: 1;
+    }
+
+    56%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* An overlay and the panel it floats, for an app that cannot use
+     <dialog> — a panel that has to survive its own re-render, or one
+     opened from a keystroke rather than a button. A dialog is the
+     better answer where it fits: the base layer dresses it the same
+     way, and the browser does the dismissing. */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: var(--dim);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 15vh;
+  }
+
+  .panel {
+    width: min(48ch, 90vw);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: var(--corner-overlay);
+    overflow: hidden;
+    box-shadow: var(--lift);
+  }
+
+  /* A settings row: the setting named in muted ink at the left, its
+     options at the right in the link dress. The current pick is bold
+     and takes no click — mark it `aria-pressed="true"` on a button, or
+     `.active`. A row can hold a select instead of options. */
+  .settings-row {
+    display: flex;
+    align-items: baseline;
+    gap: 2ch;
+  }
+
+  /* A `label` too, when the row holds a select: without the margin and
+     the weight the base layer gives a label over its field. */
+  .settings-label {
+    margin: 0 auto 0 0;
+    color: var(--ink-muted);
+    font-weight: var(--weight-regular);
+  }
+
+  .settings-option {
+    color: var(--ink-muted);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .settings-option:hover {
+    color: var(--ink);
+  }
+
+  .settings-option:is(.active, [aria-pressed="true"]) {
+    color: var(--ink);
+    font-weight: var(--weight-strong);
+    text-decoration: none;
+    cursor: default;
+  }
+
+  /* Detail that waits behind a figure: a card drawn from the same paper
+     as a panel, opened above the figure while the pointer or focus is
+     on it. It replaces a `title`, which the browser draws in its own
+     face and colours and only for a pointer. Keep the figure itself
+     focusable and point `aria-describedby` at the card, so a keyboard
+     reaches it and a screen reader reads it. Give the card
+     `tabindex="-1"` too: a click into it then holds it open by focus,
+     so its text can be selected after the pointer has wandered off. */
+  .tip {
+    position: relative;
+  }
+
+  .tip-card {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 0.5rem);
+    left: 0;
+    z-index: 10;
+    width: max-content;
+    max-width: min(48ch, 90vw);
+    padding: calc(var(--row) / 2) 2ch;
+    border: 1px solid var(--rule);
+    border-radius: var(--corner-overlay);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--lift);
+  }
+
+  .tip:is(:hover, :focus-within) .tip-card {
+    display: block;
+  }
+
+  /* The gap between figure and card, bridged, so the pointer can climb
+     from one to the other without the card closing under it. */
+  .tip-card::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    height: calc(0.5rem + 1px);
+  }
+
+  .tip-card:focus {
+    outline: none;
+  }
+
+  /* The drawn caret is fixed to the body, above any stacking an app's
+     own layout makes, so an open card cannot cover it. Nobody is
+     typing while reading one, so it steps aside instead. */
+  html:has(.tip:is(:hover, :focus-within)) .caret {
+    visibility: hidden;
+  }
+
+  /* Label and value, the values lined up at their right edge so the
+     digits sit in columns. */
+  .tip-card dl {
+    display: grid;
+    grid-template-columns: auto auto;
+    column-gap: 2ch;
+    margin: 0;
+  }
+
+  .tip-card dt {
+    color: var(--ink-muted);
+  }
+
+  .tip-card dd {
+    margin: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The controls that mean to read as buttons. Everything else that
+     happens to be a `button` element — a menu row, an icon, a copy
+     affordance — is left as the base layer leaves it, which is bare.
+     Size and line are inherited rather than set, so a control sits on
+     the same grid line as the text beside it whatever the app reads
+     at — and each is exactly one row tall, so a heading or a toolbar
+     holding one is still a whole number of rows and what follows it
+     starts on a row. */
+  .btn {
+    display: inline-flex;
+    min-height: var(--row);
+    align-items: center;
+    justify-content: center;
+    gap: 1ch;
+    border-radius: var(--corner-control);
+    padding: 0 1ch;
+    line-height: var(--row);
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .btn:hover {
+    background: var(--paper-inset);
+  }
+
+  /* The action that commits is bold and bracketed, not a coloured
+     pill — the interface has one chromatic token and it says focus.
+     The brackets are content on a button, where they are decoration;
+     an input carries its own value and takes the underline instead. */
+  .primary {
+    display: inline-flex;
+    min-height: var(--row);
+    align-items: center;
+    justify-content: center;
+    gap: 1ch;
+    border-radius: var(--corner-control);
+    padding: 0 1ch;
+    line-height: var(--row);
+    font-weight: var(--weight-strong);
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .primary:hover {
+    background: var(--paper-inset);
+    text-decoration: none;
+  }
+
+  button.primary::before {
+    content: "[" / "";
+  }
+
+  button.primary::after {
+    content: "]" / "";
+  }
+
+  input.primary {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  /* Beside it, the way out. Quiet, and the same height so the pair
+     sits on one line. */
+  .secondary {
+    display: inline-flex;
+    min-height: var(--row);
+    align-items: center;
+    justify-content: center;
+    gap: 1ch;
+    border-radius: var(--corner-control);
+    padding: 0 1ch;
+    line-height: var(--row);
+    font-weight: var(--weight-strong);
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+
+  .secondary:hover {
+    background: var(--paper-inset);
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  /* A field that wants an edge. One that does not — a composer, an
+     inline rename — takes nothing and is already bare. */
+  .field {
+    width: 100%;
+    border-bottom: 1px solid var(--boundary);
+    border-radius: var(--corner-control);
+    background: var(--paper);
+    padding: 0.5rem 0;
+    color: var(--ink);
+  }
+
+  .field::placeholder {
+    color: var(--ink-muted);
+  }
+
+  /* Focus darkens the field's one rule. `:focus` rather than
+     `:focus-visible`, because a select clicked with the pointer is
+     exactly when its underline has to say which control is open. */
+  .field:focus {
+    border-color: var(--ink);
+  }
+
+  /* A fact about the thing beside it, in the margin of a row. */
+  .badge {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    padding: 0 1ch;
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+
+  a.badge:hover {
+    background: var(--paper-inset);
+    text-decoration: none;
+  }
+
+  /* An action that is a mark rather than a word: one square on the
+     grid, quiet until the pointer is on the row. */
+  .icon-button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: none;
+    /* Three columns by one row, every edge on the character grid. */
+    width: 3ch;
+    height: var(--row);
+    border-radius: var(--corner-control);
+    color: var(--ink-muted);
+  }
+
+  .icon-button:hover {
+    background: var(--paper-inset);
+    color: var(--danger);
+  }
+
+  /* A control holding a value it will not be allowed to send. The
+     colour marks it before anything is tried; the shake answers the
+     attempt, in place of the browser's own tooltip. The script adds
+     the class and takes it off when the animation ends, so it can
+     play again. */
+  [aria-invalid="true"] {
+    color: var(--danger);
+  }
+
+  /* A select's options inherit its colour, and only the value it holds
+     is the wrong one: the choices that would fix it are ordinary. The
+     held one keeps the colour, since some browsers draw a closed select
+     in its selected option's. */
+  select[aria-invalid="true"] :is(option:enabled, optgroup) {
+    color: var(--ink);
+  }
+
+  .shake {
+    animation: paper-shake 0.3s ease-in-out;
+  }
+
+  @keyframes paper-shake {
+    0%,
+    100% {
+      translate: 0;
+    }
+
+    20%,
+    60% {
+      translate: -0.5ch;
+    }
+
+    40%,
+    80% {
+      translate: 0.5ch;
+    }
+  }
+
+  /* The touch answer to hover: what a finger lands on flashes in the
+     selection colour and fades back to its own ground, so a press is
+     seen before whatever it asked for arrives. Only where nothing
+     hovers — under a mouse, hover already said it. The app adds the
+     class on the press. */
+  @media (hover: none) {
+    .pressed {
+      animation: paper-press 0.45s ease-out;
+    }
+  }
+
+  @keyframes paper-press {
+    from {
+      background-color: var(--paper-inset);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret,
+  .shake {
+    animation: none !important;
+  }
+}

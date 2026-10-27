@@ -1,1 +1,18 @@
-/vault/repos/papercss/paper-theme.json
+{
+  "name": "paper",
+  "type": "light",
+  "colors": {
+    "editor.foreground": "#171716",
+    "editor.background": "#f1f1ee"
+  },
+  "tokenColors": [
+    { "scope": "comment", "settings": { "foreground": "#686863", "fontStyle": "italic" } },
+    { "scope": "keyword.operator", "settings": { "foreground": "#171716" } },
+    { "scope": ["keyword", "storage"], "settings": { "foreground": "#171716", "fontStyle": "bold" } },
+    { "scope": "string", "settings": { "foreground": "#1f7a8c" } },
+    { "scope": "constant", "settings": { "foreground": "#9a6b00" } },
+    { "scope": "markup.inserted", "settings": { "foreground": "#2e7d32" } },
+    { "scope": "markup.deleted", "settings": { "foreground": "#c62828" } },
+    { "scope": "invalid", "settings": { "foreground": "#c62828" } }
+  ]
+}

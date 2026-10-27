@@ -30,8 +30,18 @@ build:
 serve port=`free-port`:
     zola serve --port {{ port }}
 
-# zola serve does not see edits made through the static/ symlinks into
-# papercss, so restart it when the house stylesheet changes.
-[doc('Serve, restarting when the linked paper.css or paper.js changes')]
+# paper.css, paper.js, its fonts, and its highlighting theme are copied in from
+# papercss rather than linked, so the site builds on its own (GitHub Pages
+# included). Re-run after changing papercss, then commit the copies.
+papercss := "/vault/repos/papercss"
+
+[doc('Copy paper.css, paper.js, fonts, and the syntax theme in from papercss')]
+vendor:
+    rm -rf static/fonts
+    cp -r {{ papercss }}/fonts static/fonts
+    cp {{ papercss }}/paper.css {{ papercss }}/paper.js static/
+    cp {{ papercss }}/paper-theme.json syntax/paper.json
+
+[doc('Serve, re-copying papercss and restarting whenever it changes')]
 watch:
-    watchexec --restart --watch /vault/repos/papercss --exts css,js -- just serve
+    watchexec --restart --watch {{ papercss }} --exts css,js,json -- 'just vendor && just serve'

@@ -1,4 +1,4 @@
-base_url = "https://weblog.example"
+base_url = "https://benburk.ca"
 title = "weblog"
 default_language = "en"
 compile_sass = false
